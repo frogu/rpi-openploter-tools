@@ -1,0 +1,14 @@
+[Unit]
+Description=E-Ink display
+After=syslog.target network-online.target
+
+[Service]
+Type=simple
+User=root
+ExecStart=<<PATH TO DOWNLOADED GIT REPO >>/status.py
+Restart=always
+RestartSec=10
+KillMode=process
+
+[Install]
+WantedBy=multi-user.target
