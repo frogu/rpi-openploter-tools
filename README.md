@@ -2,6 +2,9 @@
 Various openplotter helper scripts.
 Please follow the waveshare wiki instructions for installation of dependencies
 
+![eink display](eink.png)
+
+
 # The hardware
 - raspberry pi 4
 - waveshare environment sensor hat https://www.waveshare.com/wiki/Environment_Sensor_HAT
