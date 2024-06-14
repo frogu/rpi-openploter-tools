@@ -1,0 +1,43 @@
+- block:
+  - name: enable nvme in firmware
+    ansible.builtin.lineinfile:
+      path: /boot/firmware/config.txt
+      line: "dtparam=pciex1"
+      state: present
+      create: false
+      insertafter: EOF
+    register: r_boot_config
+
+  - name: reboot system
+    ansible.builtin.reboot:
+    when: r_boot_config.changed
+
+  - name: copy sd card to nvme
+    ansible.builtin.shell: "/usr/bin/dd if=/dev/{{sd_card_device}} of=/dev/{{nvme_device}} bs=4M"
+    when: overwrite_nvme|d(False)
+
+  - name: read device information 
+    community.general.parted: 
+      device: "/dev/{{nvme_device}}"
+      unit: MiB
+    register: r_nvme_info
+
+  - name: extend existing partition to fill all available space
+    community.general.parted:
+      device: "/dev/{{nvme_device}}"
+      number: "{{ r_nvme_info.partitions | length }}"
+      part_end: "100%"
+      resize: true
+      state: present
+    ignore_errors: true
+
+  - name: resize filesystem
+    community.general.filesystem:
+      device: "{{ r_nvme_info.disk.dev}}p{{r_nvme_info.partitions[-1].num }}"
+      fstype: "{{ r_nvme_info.partitions[-1].fstype }}"
+      resizefs: true
+      state: present
+      
+
+  become: true
+  become_user: root

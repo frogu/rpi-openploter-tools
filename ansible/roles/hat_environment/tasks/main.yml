@@ -1,0 +1,39 @@
+- block:
+  - name: create destination directory
+    ansible.builtin.file:
+      state: directory
+      mode: 0755
+      path: "{{ software_dir }}"
+  
+  - name: install dependencies
+    ansible.builtin.apt:
+      package:
+        - python3-smbus
+        - python3-pil
+        - i2c-tools
+      state: present
+    become: true
+    become_user: root
+
+  - name: download waveshare environemt hat software
+    ansible.builtin.get_url:
+      url: https://files.waveshare.com/upload/b/bc/Environment_Sensor_HAT_Code.7z
+      dest: "{{ software_dir }}"
+    register: r_download
+  
+  - name: extract sofware
+    ansible.builtin.shell: "/usr/bin/7zr x {{ r_download.dest }} -r -o{{ software_dir }}"
+    when: r_download.changed
+
+  - name: manual action in GUI
+    ansible.builtin.debug:
+      msg: |
+        install ans configure signalk-raspberry-pi-bme280 plugin
+        Appstore > signalk-raspberry-pi-bme280 plugin > install
+        Server > Plugin configure > Raspberry-Pi BME280/BMP280
+          SignalK Path: outside
+          I2C bus number: 1
+          I2C address: 0x76
+
+  # become: true
+  # become_user: root

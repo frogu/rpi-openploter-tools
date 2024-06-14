@@ -1,0 +1,42 @@
+- block:
+  - name: create destination directory
+    ansible.builtin.file:
+      state: directory
+      mode: 0755
+      path: "{{ software_dir }}"
+
+  - name: clone the plotter display repo
+    ansible.builtin.git:
+      clone: true
+      dest: "{{ software_dir }}/rpi-openplotter-tools"
+      repo: https://github.com/frogu/rpi-openplotter-tools.git
+
+  # - name: clone signalk-history-plugin
+  #   ansible.builtin.git:
+  #     clone: true
+  #     dest: "{{ software_dir }}/signalk-history-plugin"
+  #     repo: https://github.com/codekilo/signalk-history-plugin.git
+
+- block:
+  - name: install influx
+    ansible.builtin.apt:
+      name: 
+        - influxdb
+        - influxdb-client
+        - python3-influxdb
+      state: present
+
+  - name: create boatdata database
+    community.general.influxdb_database:
+      hostname: localhost
+      database_name: "{{ influx_db_name }}"
+
+  - name: install dependencies pip
+    ansible.builtin.pip:
+      break_system_packages: true
+      state: present
+      name:
+        - LatLon3
+  
+  become: true
+  become_user: root

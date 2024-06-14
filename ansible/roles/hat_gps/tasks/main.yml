@@ -1,0 +1,92 @@
+- block:
+  - name: install gps software
+    ansible.builtin.apt:
+      package: 
+        - gpsd
+        - gpsd-clients
+        - chrony
+        - pps-tools
+        - libbcm2835-dev
+        - liblgpio1
+      state: present
+  
+  - name: ensure pps module is loaded at boot
+    ansible.builtin.lineinfile:
+      path: /etc/modules-load.d/modules.conf
+      line: pps_ldisc
+      state: present
+
+  - name: get serial console status
+    ansible.builtin.shell: /usr/bin/raspi-config get_serial_cons nonint
+    register: r_serial_console_status
+
+  - name: diable serial console
+    ansible.builtin.shell: /usr/bin/raspi-config do_serial_cons 1 nonint
+    when: r_serial_console_status.stdout == "0"
+      
+  - name: get serial hardware status
+    ansible.builtin.shell: /usr/bin/raspi-config get_serial_hw nonint
+    register: r_serial_hw_status
+
+  - name: enable serial hardware
+    ansible.builtin.shell: /usr/bin/raspi-config do_serial_hw 0 nonint
+    when: r_serial_hw_status.stdout == "1"
+
+  - name: reboot system
+    ansible.builtin.reboot:
+    when: r_serial_hw_status.stdout == "1" or r_serial_console_status.stdout == "0"
+
+  - name: configure gpsd
+    ansible.builtin.template:
+      dest: /etc/default/gpsd
+      src: gpsd.conf
+
+  # - name: configure gps NMEA source in chrony
+  #   ansible.builtin.lineinfile: 
+  #     path: /etc/chrony/chrony.conf
+  #     line: "refclock SHM 0 refid GPS precision 1e-1 offset 0.01 delay 0.2 noselect"
+  #     state: present
+  #     insertafter: EOF
+
+  # - name: configure gps PPS source in chrony
+  #   ansible.builtin.lineinfile: 
+  #     path: /etc/chrony/chrony.conf
+  #     # line: "refclock SHM 1 offset 0.0 delay 0.1 refid NMEA+"
+  #     line: "refclock PPS /dev/pps0 refid PPS"
+  #     state: present
+  #     insertafter: EOF
+
+  - name: configure time sources in chrony
+    ansible.builtin.lineinfile: 
+      path: /etc/chrony/chrony.conf
+      line: "{{ refclock }}"
+      state: present
+      insertafter: EOF
+    with_items:
+      - "refclock SOCK /run/chrony.ttyACM0.sock refid GPS precision 1e-1 offset 0.9999"
+      - "refclock SOCK /run/chrony.pps0.sock    refid PPS precision 1e-7"
+    loop_control:
+      loop_var: refclock
+
+  - name: restart chrony
+    ansible.builtin.systemd_service:
+      enabled: true
+      name: chrony
+      state: restarted
+  
+  - name: restart gpsd
+    ansible.builtin.systemd_service:
+      enabled: true
+      name: gpsd
+      state: restarted
+      
+  - name: manual action in GUI
+    ansible.builtin.debug:
+      msg: |
+        add gps source to signalk:
+        Server > Data Connections > +Add
+          Data Type: NMEA0183
+          ID: gpsd
+          NMEA 0183 Source: GPSD
+  become: true
+  become_user: root

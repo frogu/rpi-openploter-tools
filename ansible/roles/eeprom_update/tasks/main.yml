@@ -1,0 +1,13 @@
+- block:
+  - name: upgrade system
+    ansible.builtin.shell: /usr/bin/rpi-eeprom-update -a
+    register: r_eeprom_update
+    changed_when: "r_eeprom_update.stdout_lines[0] != 'BOOTLOADER: up to date'"
+  
+  - name: reboot system
+    ansible.builtin.reboot:
+    when: r_eeprom_update.changed
+    # when: r_eeprom_update.stdout.find('until the update is complete') != 1
+      
+  become: true
+  become_user: root

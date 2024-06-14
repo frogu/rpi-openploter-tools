@@ -1,0 +1,45 @@
+- block:
+  - name: enable i2c
+    ansible.builtin.shell: /usr/bin/raspi-config do_wayland "W1 X11" nonint
+
+  - name: get i2c status
+    ansible.builtin.shell: /usr/bin/raspi-config get_i2c nonint
+    register: r_i2c_status
+  
+  - block:
+      - name: enable i2c
+        ansible.builtin.shell: /usr/bin/raspi-config do_i2c 0 nonint
+      
+      - name: reboot system
+        ansible.builtin.reboot:
+    when: r_i2c_status.stdout == "1"
+  
+  - name: get screen blanking status
+    ansible.builtin.shell: /usr/bin/raspi-config get_blanking nonint
+    register: r_blanking_status
+
+  - block:
+      - name: disable screen blanking
+        ansible.builtin.shell: /usr/bin/raspi-config do_blanking 1 nonint
+      
+      - name: reboot system
+        ansible.builtin.reboot:
+    when: r_blanking_status.stdout == "0"
+
+
+  # - name: change to Wayland
+  #   ansible.builtin.shell: /usr/bin/raspi-config do_wayland "W2 Wayland" nonint
+
+  
+
+  # - name: reboot system
+  #   ansible.builtin.reboot:
+  - name: install on screen keyboard
+    ansible.builtin.apt:
+      name: 
+        - wvkbd
+        - matchbox-keyboard
+      state: present
+      
+  become: true
+  become_user: root

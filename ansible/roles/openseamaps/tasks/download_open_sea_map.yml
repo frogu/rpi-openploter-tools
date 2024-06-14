@@ -1,0 +1,15 @@
+
+- name: chart info
+  debug:
+    msg: "chart: {{ chart_region }}"
+    
+- name: download map archive
+  ansible.builtin.get_url:
+    url: "https://ftp.gwdg.de/pub/misc/openstreetmap/openseamap/charts/kap/OSM-OpenCPN2-KAP-{{ chart_region }}.7z"
+    dest: "{{ charts_dir }}/OSM-OpenCPN2-KAP-{{ chart_region }}.7z"
+    force: false
+  register: r_download_chart
+
+- name: extract archive
+  ansible.builtin.shell: "/usr/bin/7zr x {{ r_download_chart.dest }} -r -o{{ charts_dir }}"
+  when: r_download_chart.changed

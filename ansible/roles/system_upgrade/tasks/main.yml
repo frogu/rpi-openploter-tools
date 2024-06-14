@@ -1,0 +1,10 @@
+- block:
+  - name: enable the backports repository
+    ansible.builtin.apt_repository:
+      repo: "deb http://deb.debian.org/debian {{ ansible_distribution_release }}-backports main contrib non-free"
+      state: present
+  - name: upgrade system
+    ansible.builtin.apt:
+      upgrade: full
+  become: true
+  become_user: root

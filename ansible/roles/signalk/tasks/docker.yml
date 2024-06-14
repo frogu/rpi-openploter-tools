@@ -1,0 +1,30 @@
+# unused
+- block:
+  - name: Create a volume
+    community.docker.docker_volume:
+      name: signalk_data
+  # - name: ensure peristent storage dir exists
+  #   ansible.builtin.file:
+  #     state: directory
+  #     path: /srv/signalk
+
+  - name: signalk server
+    community.docker.docker_container:
+      auto_remove: false
+      detach: true
+      image: "cr.signalk.io/signalk/signalk-server:{{ version_signalk }}"
+      interactive: false
+      ports:
+        - "3000:3000"
+      mounts:
+        - source: signalk_data
+          target: /home/node/.signalk
+          type: volume
+        # - source: "/srv/signalk"
+        #   target: /home/node/.signalk
+        #   type: bind
+      name: signalk-server
+      restart_policy: always
+      state: started
+  become: true
+  become_user: root

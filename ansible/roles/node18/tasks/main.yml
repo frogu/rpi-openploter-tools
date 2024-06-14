@@ -1,0 +1,17 @@
+- block:
+  - name: node repo signing key
+    ansible.builtin.apt_key:
+      state: present
+      url: https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key
+
+  - name: node18 repo
+    ansible.builtin.apt_repository:
+      repo: "deb https://deb.nodesource.com/node_18.x nodistro main"
+      state: present
+
+  - name: install nodejs18
+    ansible.builtin.apt:
+      package: nodejs
+      state: present
+  become: true
+  become_user: root

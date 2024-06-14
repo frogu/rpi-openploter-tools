@@ -1,0 +1,59 @@
+
+# - block:
+#   - name: install opencpn
+#     ansible.builtin.apt:
+#       package: opencpn
+#       state: latest
+#   become: true
+#   become_user: root
+- block:
+  - name: install flatpak
+    ansible.builtin.apt:
+      package: flatpak
+      state: latest
+  become: true
+  become_user: root
+
+- block:
+  - name: make .themes directory
+    ansible.builtin.file:
+      state: directory
+      path: "{{ ansible_user_dir }}"
+  
+  - name: copy system themes
+    ansible.builtin.copy:
+      remote_src: true
+      src: "/usr/share/themes/{{theme}}"
+      dest: "{{ ansible_user_dir }}/.themes/{{theme}}"
+    with_items:
+      - PiXflat
+      - PiXflat_l
+      - PiXnoir
+      - PiXnoir_l
+      - tPiXflat
+    loop_control:
+      loop_var: theme
+  
+  - name: override flatpak gtk conf
+    ansible.builtin.shell: /usr/bin/flatpak  override --user --filesystem=xdg-config/gtk-3.0:ro
+
+  # flatpak version, because debian repo version does not see the usb dongle...
+  - name: install opencpn
+    community.general.flatpak:
+      name: 
+        - org.opencpn.OpenCPN
+      method: user
+      state: present
+
+  # works only on local opencpn
+  # - name: install o-charts plugin
+  #   ansible.builtin.shell: /usr/bin/opencpn-cmd install-plugin o-charts
+
+- name: add signalk connection
+  ansible.builtin.debug:
+    msg: |
+      Settings > Connections > Configure new connection
+      Network
+      Address: localhost
+      port: 3000
+      comment: signalk

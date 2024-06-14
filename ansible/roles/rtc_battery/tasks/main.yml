@@ -1,0 +1,16 @@
+- block:
+  - name: enable rtc battery in firmware
+    ansible.builtin.lineinfile:
+      path: /boot/firmware/config.txt
+      line: "dtparam=rtc=bbat_vchg=3000000"
+      state: present
+      create: false
+      insertafter: EOF
+    register: r_boot_config
+
+  - name: reboot system
+    ansible.builtin.reboot:
+    when: r_boot_config.changed
+
+  become: true
+  become_user: root

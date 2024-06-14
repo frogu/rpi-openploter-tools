@@ -1,0 +1,16 @@
+
+- block:
+  - name: install signalk 
+    community.general.npm:
+      name: signalk-server
+      global: true
+  
+  - name: too much work to unravel the interactive script
+    debug:
+      msg: |
+        Please execute `sudo signalk-server-setup`.
+        Defaults are "good enough"
+
+
+  become: true
+  become_user: root

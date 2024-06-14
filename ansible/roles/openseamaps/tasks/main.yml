@@ -1,0 +1,13 @@
+
+- block:
+  - name: create map dir
+    ansible.builtin.file:
+      state: directory
+      path: "{{ charts_dir }}"
+
+  - name: download and extract maps
+    ansible.builtin.include_tasks: 
+      file: download_open_sea_map.yml
+    with_items: "{{ openseamap_charts }}" 
+    loop_control:
+      loop_var: chart_region

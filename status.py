@@ -63,12 +63,12 @@ class TimeSeries():
         self.ensure_continuous_queries_exist()
         
     def ensure_continuous_queries_exist(self):    
-        if not self.query_exists("environment_outside_pressure_avg_1h"):
-            self. create_continuous_query_1h_avg("environment.outside.pressure")
-        if not self.query_exists("environment_outside_temperature_avg_1h"):
-            self. create_continuous_query_1h_avg("environment.outside.temperature")
-        if not self.query_exists("environment_outside_humidity_avg_1h"):
-            self. create_continuous_query_1h_avg("environment.outside.humidity")
+        if not self.query_exists("environment_outside_pressure_mean_1h"):
+            self. create_continuous_query_1h_mean("environment.outside.pressure")
+        if not self.query_exists("environment_outside_temperature_mean_1h"):
+            self. create_continuous_query_1h_mean("environment.outside.temperature")
+        if not self.query_exists("environment_outside_humidity_mean_1h"):
+            self. create_continuous_query_1h_mean("environment.outside.humidity")
         if not self.query_exists("navigation_position_last_1h"):
             self. create_continuous_query_1h_last("navigation.position",value="*")
         if not self.query_exists("navigation_position_first_1h"):
@@ -76,14 +76,15 @@ class TimeSeries():
         
     def query_exists(self, query_name):
         queries = self.db.get_list_continuous_queries()
-        queries = [ a[self.dbname] for a in queries if a.get(self.dbname,None)][0]
+        queries = [ a[self.dbname] for a in queries if a.get(self.dbname,None)]
+        queries = queries[0] if queries else []
         logging.debug('boatdata queries: {}'.format(queries))
         my_query =[ a for a in queries if a.get('name',None) == query_name]
         logging.debug("my query: {}".format(my_query))
         return bool(my_query)
 
-    def create_continuous_query_1h_avg(self, measurement):
-        self.create_continuous_query(measurement, period="1h", resample_every="10m", function='avg')
+    def create_continuous_query_1h_mean(self, measurement):
+        self.create_continuous_query(measurement, period="1h", resample_every="10m", function='mean')
 
     def create_continuous_query_1h_last(self, measurement, value='"value"'):
         self.create_continuous_query(measurement, period="1h", resample_every="10m", function='last', value=value)
@@ -113,10 +114,14 @@ class TimeSeries():
         self.db.create_continuous_query(cq_name, select_clause, self.dbname, resample)
 
     def current_position(self):
-        pos=self.db.query('select mean(lat) as lat,mean(lon) as lon from "navigation.position" where time >= now()-5s')
-        position=[a for a in pos.get_points()][0]
-        ll=latlon.LatLon(position['lat'], position['lon'])
-        return ll
+        pos=self.db.query('select mean(lat) as lat,mean(lon) as lon from "navigation.position" where time >= now()-11s')
+        position=[a for a in pos.get_points()]
+        position=position[0] if position else None
+        if position:
+            ll=latlon.LatLon(position['lat'], position['lon'])
+            return ll
+        else:
+            return None
     
     def current_cog_true(self):
         try:
@@ -144,20 +149,24 @@ class TimeSeries():
         return sog
 
     def average_pressure_1h(self):
-        value = self.db.query('select mean from "environment.outside.pressure_avg_1h" order by time desc limit 1')
-        value = [a for a in value.get_points()][0]['mean']
+        value = self.db.query('select mean from "environment.outside.pressure_mean_1h" order by time desc limit 1')
+        value = [a for a in value.get_points()]
+        value = value[0]['mean'] if value else None
         #     # pressure in hPa = Pa/100
-        return value/100
+        
+        return value/100 if value else 0
 
     def average_temperature_1h(self):
-        value = self.db.query('select mean from "environment.outside.temperature_avg_1h" order by time desc limit 1')
-        value = [a for a in value.get_points()][0]['mean']
+        value = self.db.query('select mean from "environment.outside.temperature_mean_1h" order by time desc limit 1')
+        value = [a for a in value.get_points()]
+        value = value[0]['mean'] if value else 0.0
         #     # temperature in C = K - 273.15
-        return value-273.15
+        return value-273.15 
 
     def average_humidity_1h(self):
-        value = self.db.query('select mean from "environment.outside.humidity_avg_1h" order by time desc limit 1')
-        value = [a for a in value.get_points()][0]['mean']
+        value = self.db.query('select mean from "environment.outside.humidity_mean_1h" order by time desc limit 1')
+        value = [a for a in value.get_points()]
+        value = value[0]['mean'] if value else -0.99
         #     # humidity in % = ratio * 100
         return value * 100
     
@@ -258,8 +267,13 @@ class EInk():
 
     def current_position_text(self):
         ll = self.db.current_position()
-        lon="{deg:03d}°{min:04.1f}'{hemi}".format(deg=int(ll.lon.degree), min=ll.lon.decimal_minute, hemi=ll.lon.get_hemisphere())
-        lat="{deg:02d}°{min:04.1f}'{hemi}".format(deg=int(ll.lat.degree), min=ll.lat.decimal_minute, hemi=ll.lat.get_hemisphere())
+        if ll:
+            lon="{deg:03d}°{min:04.1f}'{hemi}".format(deg=int(ll.lon.degree), min=ll.lon.decimal_minute, hemi=ll.lon.get_hemisphere())
+            lat="{deg:02d}°{min:04.1f}'{hemi}".format(deg=int(ll.lat.degree), min=ll.lat.decimal_minute, hemi=ll.lat.get_hemisphere())
+        else:
+            lon="--- --.-'X"
+            lat="-- --.-'X"
+
         text = "{}  {}".format(lat,lon)
         logging.debug("Current Position: {}".format(text))
         return text
@@ -358,7 +372,6 @@ class EInk():
                 self.draw_current_sog_cog_line()
                 self.draw_desc_line()
                 self.draw_battery_line()
-
 
                 if (num == 0):
                     self.epd.display(self.epd.getbuffer(self.image))    

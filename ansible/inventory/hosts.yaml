@@ -1,0 +1,4 @@
+plotter:
+  hosts:
+    plotter.proszek.info:
+      ansible_user: plotter

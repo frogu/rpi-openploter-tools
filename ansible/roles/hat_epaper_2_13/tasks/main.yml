@@ -1,0 +1,86 @@
+- block:
+  - name: create destination directory
+    ansible.builtin.file:
+      state: directory
+      mode: 0755
+      path: "{{ software_dir }}"
+
+  - name: get spi status
+    ansible.builtin.shell: /usr/bin/raspi-config get_spi nonint
+    register: r_spi_status
+  
+  - block:
+      - name: enable spi
+        ansible.builtin.shell: /usr/bin/raspi-config do_spi 0 nonint
+      
+      - name: reboot system
+        ansible.builtin.reboot:
+    when: r_spi_status.stdout == "1"
+
+  - name: install dependencies apt
+    ansible.builtin.apt:
+      name: 
+        - python3-pil
+        - python3-numpy 
+        - python3-gpiozero
+      state: present
+
+  - name: install dependencies pip
+    ansible.builtin.pip:
+      break_system_packages: true
+      state: present
+      name:
+        - RPi.GPIO
+        - spidev
+
+  become: true
+  become_user: root
+
+- block:
+  - name: create destination directory
+    ansible.builtin.file:
+      state: directory
+      mode: 0755
+      path: "{{ software_dir }}/e-Paper"
+
+  - name: download the e-paper code
+    ansible.builtin.unarchive:
+      src: https://files.waveshare.com/upload/7/71/E-Paper_code.zip
+      dest: "{{ software_dir }}/e-Paper"
+      remote_src: true
+
+  - name: clone the plotter display repo
+    ansible.builtin.git:
+      clone: true
+      dest: "{{ software_dir }}/rpi-openplotter-tools"
+      repo: https://github.com/frogu/rpi-openplotter-tools.git
+
+  # - name: install dependencies
+  #   ansible.builtin.apt:
+  #     package:
+  #       - python3-smbus
+  #       - python3-pil
+  #       - i2c-tools
+  #     state: present
+  #   become: true
+  #   become_user: root
+
+  # - name: download waveshare environemt hat software
+  #   ansible.builtin.get_url:
+  #     url: https://files.waveshare.com/upload/b/bc/Environment_Sensor_HAT_Code.7z
+  #     dest: "{{ software_dir }}"
+  #   register: r_download
+  
+  # - name: extract sofware
+  #   ansible.builtin.shell: "/usr/bin/7zr x {{ r_download.dest }} -r -o{{ software_dir }}"
+  #   when: r_download.changed
+
+  # - name: manual action in GUI
+  #   ansible.builtin.debug:
+  #     msg: |
+  #       install ans configure signalk-raspberry-pi-bme280 plugin
+  #       Appstore > signalk-raspberry-pi-bme280 plugin > install
+  #       Server > Plugin configure > Raspberry-Pi BME280/BMP280
+  #         SignalK Path: outside
+  #         I2C bus number: 1
+  #         I2C address: 0x76

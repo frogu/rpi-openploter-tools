@@ -1,0 +1,36 @@
+- name: configure rpi5
+  hosts: plotter.proszek.info
+  vars:
+    overwrite_nvme: False
+    sd_card_device: mmcblk0
+    nvme_device: nvme0n1
+    software_dir: "{{ ansible_user_dir }}/Piaskownica/"
+    charts_dir: "{{ ansible_user_dir }}/Charts/"
+    version_signalk: "v2.8.2"
+    influx_db_name: boatdata
+    openseamap_charts:
+      - Adria
+      - Baltic
+      - Europa1
+      - Germany-NorthEast
+      - Lake_Balaton
+      - Niederlande-Binnen
+      - NorthSea
+      - NorthWestPassage
+      - Saimaa
+
+  roles:
+    # - system_upgrade
+    # - eeprom_update
+    # - hat_nvme
+    # - rtc_battery
+    - rpi_config
+    # - hat_gps
+    # - hat_environment
+    # - hat_ups
+    # - hat_epaper_2_13
+    # - node18 
+    # - signalk
+    # - openseamaps
+    # - opencpn
+    # - status_display
